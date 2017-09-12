@@ -1,0 +1,6 @@
+.venv
+venv
+_libssh2_py.c
+_libssh2_py.o
+_libssh2_py.so
+dumpfile
