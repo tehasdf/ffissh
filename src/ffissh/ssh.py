@@ -6,7 +6,7 @@ from ._libssh2 import lib, ffi
 from . import constants, exceptions, utils
 
 
-def _read_output(chan, conn):
+def _read_output(chan, conn, blocking=True):
     buf = ffi.new('char[1024]')
     while True:
         rc = lib.libssh2_channel_read(chan, buf, 1024)
@@ -14,6 +14,8 @@ def _read_output(chan, conn):
             out = ffi.buffer(buf, rc)
             yield str(out)
         elif rc == constants.LIBSSH2_ERROR_EAGAIN:
+            if not blocking:
+                break
             conn.waitsocket()
         elif rc == 0:
             break
@@ -55,6 +57,9 @@ class Channel(object):
     def read(self):
         return ''.join(_read_output(self._chan, self._conn))
 
+    def read_nonblocking(self):
+        return ''.join(_read_output(self._chan, self._conn, blocking=False))
+
 
 class Connection(object):
     def __init__(self, host=None, port=22, username=None):
@@ -80,12 +85,12 @@ class Connection(object):
         self._sock = socket.create_connection((self.host, self.port))
         utils._run_until_done(lib.libssh2_session_handshake,
                               self._session, self._sock.fileno())
-        lib.libssh2_session_set_blocking(self._session, False)
         if verify_fingerprint:
             raise NotImplementedError()
         utils._run_until_done(lib.libssh2_userauth_publickey_fromfile,
                               self._session, self.username, self.pubkey,
                               self.privkey, self.passphrase)
+        lib.libssh2_session_set_blocking(self._session, False)
 
     def open_channel(self):
         while True:
@@ -102,10 +107,16 @@ class Connection(object):
         return Channel(chan, self)
 
     def request_portforward(self, port):
-        listener = lib.libssh2_channel_forward_listen(self._session, port)
+        boundport = ffi.new('int*')
+        lib.libssh2_session_set_blocking(self._session, True)
+        listener = lib.libssh2_channel_forward_listen_ex(
+            self._session, self.host, port, boundport, 16)
+        if not listener:
+            raise exceptions.SSHError('Could not start listener')
         chan = lib.libssh2_channel_forward_accept(listener)
         if not chan:
             raise exceptions.SSHError('Could not accept forward')
+        lib.libssh2_session_set_blocking(self._session, False)
         return Channel(chan, self)
 
     def waitsocket(self):

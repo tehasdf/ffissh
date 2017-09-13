@@ -61,6 +61,9 @@ ffibuilder.cdef("""
     int libssh2_session_block_directions(LIBSSH2_SESSION *session);
     int libssh2_session_last_error(LIBSSH2_SESSION *session, char **errmsg,
                                    int *errmsg_len, int want_buf);
+    LIBSSH2_LISTENER *libssh2_channel_forward_listen_ex(
+        LIBSSH2_SESSION *session, const char *host, int port, int *bound_port,
+        int queue_maxsize);
 
 """)
 
