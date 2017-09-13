@@ -1,0 +1,2 @@
+class SSHError(Exception):
+    pass
