@@ -9,7 +9,7 @@ from cffi import FFI
 ffibuilder = FFI()
 
 ffibuilder.set_source(
-    "_libssh2_py",
+    "ffissh._libssh2",
     r""" // passed to the real C compiler
         #include "libssh2.h"
     """,

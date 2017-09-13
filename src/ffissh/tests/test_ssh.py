@@ -1,0 +1,2 @@
+
+from ffissh import ssh
