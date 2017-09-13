@@ -20,6 +20,7 @@ ffibuilder.cdef("""
     typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
     typedef struct _LIBSSH2_KNOWNHOSTS LIBSSH2_KNOWNHOSTS;
     typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
+    typedef struct _LIBSSH2_LISTENER LIBSSH2_LISTENER;
     struct libssh2_knownhost {
         unsigned int magic;  /* magic stored by the library */
         void *node; /* handle to the internal representation of this host */
@@ -53,6 +54,14 @@ ffibuilder.cdef("""
     int libssh2_channel_exec(LIBSSH2_CHANNEL *channel, const char *command);
     ssize_t libssh2_channel_read(LIBSSH2_CHANNEL *channel,
                                  char *buf, size_t buflen);
+    LIBSSH2_LISTENER *libssh2_channel_forward_listen(LIBSSH2_SESSION *session,
+                                                     int port);
+    LIBSSH2_CHANNEL *libssh2_channel_forward_accept(
+        LIBSSH2_LISTENER *listener);
+    int libssh2_session_block_directions(LIBSSH2_SESSION *session);
+    int libssh2_session_last_error(LIBSSH2_SESSION *session, char **errmsg,
+                                   int *errmsg_len, int want_buf);
+
 """)
 
 if __name__ == "__main__":
