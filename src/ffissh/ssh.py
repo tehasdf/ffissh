@@ -56,22 +56,39 @@ class Channel(object):
             else:
                 break
         stdout = self.read()
-        return Result(0, stdout, '')
+        stderr = self.read_stderr()
+        return Result(0, stdout, stderr)
 
     def read(self):
         return ''.join(_read_output(self._chan, self._conn))
 
+    def read_stderr(self):
+        return ''.join(_read_output(self._chan, self._conn,
+                                    read_func=lib.libssh2_channel_read_stderr))
+
     def read_nonblocking(self):
         return ''.join(_read_output(self._chan, self._conn, blocking=False))
 
+    def write(self, data):
+        while True:
+            rc = lib.libssh2_channel_write(self._chan, data, len(data))
+            if rc > 0:
+                data = data[rc:]
+            elif rc == constants.LIBSSH2_ERROR_EAGAIN:
+                self._sftp.connection.waitsocket()
+            else:
+                break
+
 
 class SftpFile(object):
-    def __init__(self, sftp, path, mode='r'):
+    def __init__(self, sftp, path, mode='r', chmod=0):
         self._sftp = sftp
         self._mode = mode
         flags = {
             'r': constants.LIBSSH2_FXF_READ,
-            'w': constants.LIBSSH2_FXF_WRITE | constants.LIBSSH2_FXF_TRUNC,
+            'w': (constants.LIBSSH2_FXF_WRITE |
+                  constants.LIBSSH2_FXF_TRUNC |
+                  constants.LIBSSH2_FXF_CREAT),
             'a': constants.LIBSSH2_FXF_APPEND,
             'r+': (constants.LIBSSH2_FXF_READ |
                    constants.LIBSSH2_FXF_WRITE |
@@ -83,7 +100,7 @@ class SftpFile(object):
                 sftp._session,
                 path,
                 flags,
-                0,  # file permissions
+                chmod,  # file permissions
             )
             if not self._handle:
                 errno = lib.libssh2_session_last_errno(
@@ -140,6 +157,31 @@ class Sftp(object):
     def open(self, *args, **kwargs):
         return SftpFile(self, *args, **kwargs)
 
+    def put(self, local_path, remote_path):
+        with open(local_path) as f:
+            data = f.read()
+        with self.open(remote_path, 'w', chmod=0755) as f:
+            f.write(data)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
+
+class Listener(object):
+    def __init__(self, listener, conn):
+        self._conn = conn
+        self._listener = listener
+
+    def accept(self):
+        chan = lib.libssh2_channel_forward_accept(self._listener)
+        if not chan:
+            raise exceptions.SSHError('Could not accept forward')
+        # lib.libssh2_session_set_blocking(self._session, False)
+        return Channel(chan, self._conn)
+
 
 class Connection(object):
     def __init__(self, host=None, port=22, username=None):
@@ -191,14 +233,10 @@ class Connection(object):
         boundport = ffi.new('int*')
         lib.libssh2_session_set_blocking(self._session, True)
         listener = lib.libssh2_channel_forward_listen_ex(
-            self._session, self.host, port, boundport, 16)
+            self._session, '0.0.0.0', port, boundport, 16)
         if not listener:
             raise exceptions.SSHError('Could not start listener')
-        chan = lib.libssh2_channel_forward_accept(listener)
-        if not chan:
-            raise exceptions.SSHError('Could not accept forward')
-        lib.libssh2_session_set_blocking(self._session, False)
-        return Channel(chan, self)
+        return Listener(listener, self)
 
     def waitsocket(self):
         dirs = lib.libssh2_session_block_directions(self._session)
@@ -208,3 +246,9 @@ class Connection(object):
         if dirs & constants.LIBSSH2_SESSION_BLOCK_OUTBOUND:
             writefd.append(self._sock)
         return select.select(readfd, writefd, [], 10)
+
+    def close(self):
+        pass
+
+    def open_sftp(self):
+        return Sftp(self)
