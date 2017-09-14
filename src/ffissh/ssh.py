@@ -6,10 +6,14 @@ from ._libssh2 import lib, ffi
 from . import constants, exceptions, utils
 
 
-def _read_output(chan, conn, blocking=True):
-    buf = ffi.new('char[1024]')
+def _read_output(
+        chan, conn,
+        blocking=True,
+        read_func=lib.libssh2_channel_read):
+    bufsize = 1024
+    buf = ffi.new('char[{}]'.format(bufsize))
     while True:
-        rc = lib.libssh2_channel_read(chan, buf, 1024)
+        rc = read_func(chan, buf, bufsize)
         if rc > 0:
             out = ffi.buffer(buf, rc)
             yield str(out)
@@ -61,6 +65,62 @@ class Channel(object):
         return ''.join(_read_output(self._chan, self._conn, blocking=False))
 
 
+class SftpFile(object):
+    def __init__(self, sftp, path, mode='r'):
+        self._sftp = sftp
+        self._mode = mode
+        flags = {
+            'r': constants.LIBSSH2_FXF_READ,
+            'w': constants.LIBSSH2_FXF_WRITE & constants.LIBSSH2_FXF_TRUNC,
+            'a': constants.LIBSSH2_FXF_APPEND,
+            'r+': (constants.LIBSSH2_FXF_READ
+                   & constants.LIBSSH2_FXF_WRITE
+                   & constants.LIBSSH2_FXF_TRUNC),
+            }[mode]
+
+        self._handle = lib.libssh2_sftp_open(
+            sftp._session,
+            path,
+            flags,
+            0,  # file permissions
+            )
+
+    def read(self):
+        return ''.join(_read_output(
+            self._handle,
+            self._sftp.connection,
+            read_func=lib.libssh2_sftp_read,
+            blocking=False))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        lib.libssh2_sftp_close_handle(self._handle)
+
+
+class Sftp(object):
+    def __init__(self, connection):
+        self.connection = connection
+        while True:
+            self._session = lib.libssh2_sftp_init(connection._session)
+            if not self._session:
+                # TODO: make threadsafe
+                errno = lib.libssh2_session_last_errno(
+                        self.connection._session)
+                if errno == constants.LIBSSH2_ERROR_EAGAIN:
+                    self.connection.waitsocket()
+                else:
+                    raise RuntimeError('failed to initialize SFTP session')
+            else:
+                break
+
+        ffi.gc(self._session, lib.libssh2_sftp_shutdown)
+
+    def open(self, *args, **kwargs):
+        return SftpFile(self, *args, **kwargs)
+
+
 class Connection(object):
     def __init__(self, host=None, port=22, username=None):
         self.host = host
@@ -96,6 +156,7 @@ class Connection(object):
         while True:
             chan = lib.libssh2_channel_open_session(self._session)
             if not chan:
+                # TODO: make threadsafe
                 errno = lib.libssh2_session_last_error(self._session,
                                                        ffi.NULL, ffi.NULL, 0)
                 if errno == constants.LIBSSH2_ERROR_EAGAIN:

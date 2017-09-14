@@ -3,6 +3,7 @@ venv
 dumpfile
 
 .tox
+*.egg-info
 .cache
 
 *.pyc
