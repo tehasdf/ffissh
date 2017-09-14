@@ -160,7 +160,7 @@ class Sftp(object):
     def put(self, local_path, remote_path):
         with open(local_path) as f:
             data = f.read()
-        with self.open(remote_path, 'w', chmod=0755) as f:
+        with self.open(remote_path, 'w', chmod=0o755) as f:
             f.write(data)
 
     def __enter__(self):
