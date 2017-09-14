@@ -5,9 +5,9 @@ from setuptools import setup
 
 setup(
     name='ffissh',
-    version='0.1.dev0',
+    version='0.1.dev1',
 
-    url='https://github.com/tehasdf/cloudify-ffissh-plugin',
+    url='https://github.com/tehasdf/ffissh',
     author='Matt Wheeler, Łukasz Maksymczuk',
     author_email='m@funkyhat.org',
 
