@@ -71,12 +71,12 @@ class SftpFile(object):
         self._mode = mode
         flags = {
             'r': constants.LIBSSH2_FXF_READ,
-            'w': constants.LIBSSH2_FXF_WRITE & constants.LIBSSH2_FXF_TRUNC,
+            'w': constants.LIBSSH2_FXF_WRITE | constants.LIBSSH2_FXF_TRUNC,
             'a': constants.LIBSSH2_FXF_APPEND,
-            'r+': (constants.LIBSSH2_FXF_READ
-                   & constants.LIBSSH2_FXF_WRITE
-                   & constants.LIBSSH2_FXF_TRUNC),
-            }[mode]
+            'r+': (constants.LIBSSH2_FXF_READ |
+                   constants.LIBSSH2_FXF_WRITE |
+                   constants.LIBSSH2_FXF_TRUNC),
+        }[mode]
 
         while True:
             self._handle = lib.libssh2_sftp_open(
@@ -102,6 +102,16 @@ class SftpFile(object):
             read_func=lib.libssh2_sftp_read,
             blocking=True))
 
+    def write(self, data):
+        while True:
+            rc = lib.libssh2_sftp_write(self._handle, data, len(data))
+            if rc > 0:
+                data = data[rc:]
+            elif rc == constants.LIBSSH2_ERROR_EAGAIN:
+                self._sftp.connection.waitsocket()
+            else:
+                break
+
     def __enter__(self):
         return self
 
@@ -117,7 +127,7 @@ class Sftp(object):
             if not self._session:
                 # TODO: make threadsafe
                 errno = lib.libssh2_session_last_errno(
-                        self.connection._session)
+                    self.connection._session)
                 if errno == constants.LIBSSH2_ERROR_EAGAIN:
                     self.connection.waitsocket()
                 else:

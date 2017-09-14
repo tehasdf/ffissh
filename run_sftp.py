@@ -15,6 +15,9 @@ def _ssh(args):
         with sftp.open('f.json') as f:
             print(f.read())
 
+        with sftp.open('f.json', 'w') as f:
+            f.write('hello')
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('command', nargs=argparse.REMAINDER)

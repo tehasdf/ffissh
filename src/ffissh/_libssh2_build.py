@@ -99,6 +99,8 @@ int libssh2_sftp_close_handle(LIBSSH2_SFTP_HANDLE *handle);
 
 ssize_t libssh2_sftp_read(
         LIBSSH2_SFTP_HANDLE *handle, char *buffer, size_t buffer_maxlen);
+ssize_t libssh2_sftp_write(LIBSSH2_SFTP_HANDLE *handle, const char *buffer,
+                           size_t count);
 """)
 
 if __name__ == "__main__":
