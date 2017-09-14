@@ -19,4 +19,8 @@ setup(
     cffi_modules=[
         "src/ffissh/_libssh2_build.py:ffibuilder",
         ],
+
+    classifiers=[
+        "License :: OSI Approved :: Apache Software License",
+        ],
     )
