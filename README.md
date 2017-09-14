@@ -19,9 +19,9 @@ virtualenv venv
 venv/bin/pip install cffi
 ```
 
-Compile the cffi wrapper:
+Install ffissh:
 ```bash
-venv/bin/python libssh2_build.py
+venv/bin/python -m pip install ../..
 ```
 
 This will create the shared library `_libssh2_py.so`.
