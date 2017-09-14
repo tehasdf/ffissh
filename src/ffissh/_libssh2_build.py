@@ -71,6 +71,8 @@ int libssh2_channel_exec(LIBSSH2_CHANNEL *channel, const char *command);
 
 ssize_t libssh2_channel_read(LIBSSH2_CHANNEL *channel,
                              char *buf, size_t buflen);
+ssize_t libssh2_channel_read_stderr(LIBSSH2_CHANNEL *channel,
+                             char *buf, size_t buflen);
 
 LIBSSH2_LISTENER *libssh2_channel_forward_listen(LIBSSH2_SESSION *session,
                                                  int port);
@@ -101,6 +103,9 @@ ssize_t libssh2_sftp_read(
         LIBSSH2_SFTP_HANDLE *handle, char *buffer, size_t buffer_maxlen);
 ssize_t libssh2_sftp_write(LIBSSH2_SFTP_HANDLE *handle, const char *buffer,
                            size_t count);
+ssize_t libssh2_channel_write(LIBSSH2_CHANNEL *channel, const char *buf,
+                                             size_t buflen);
+
 """)
 
 if __name__ == "__main__":
