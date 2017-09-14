@@ -1,6 +1,8 @@
+
 import os
-import socket
 import select
+import socket
+from getpass import getuser
 
 from ._libssh2 import lib, ffi
 from . import constants, exceptions, utils
@@ -187,7 +189,7 @@ class Connection(object):
     def __init__(self, host=None, port=22, username=None):
         self.host = host
         self.port = port
-        self.username = username
+        self.username = username or getuser()
         self.privkey = os.path.expanduser('~/.ssh/id_rsa')
         self.pubkey = os.path.expanduser('~/.ssh/id_rsa.pub')
         self._session = None
