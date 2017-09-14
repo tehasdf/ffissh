@@ -1,11 +1,15 @@
+# -*- coding: utf-8 -*-
 
 from setuptools import setup
 
 
 setup(
     name='ffissh',
-    author='Matt Wheeler, Lukasz Maksymczuk',
-    version='0.1',
+    version='0.1.dev0',
+
+    url='https://github.com/tehasdf/cloudify-ffissh-plugin',
+    author='Matt Wheeler, Łukasz Maksymczuk',
+    author_email='m@funkyhat.org',
 
     packages=[
         'ffissh',
