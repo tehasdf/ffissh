@@ -14,5 +14,10 @@ def _run_until_done(func, *args, **kwargs):
         if rc != constants.LIBSSH2_ERROR_EAGAIN:
             break
     if rc:
-        raise exceptions.SSHError('Error {0} calling {1}(*{2}, **{3})'
-                                  .format(rc, func, args, kwargs))
+        raise exceptions.SSHError(
+            'Error calling {func}(*{args}, **{kwargs})'.format(
+                func=func,
+                args=args,
+                kwargs=kwargs,
+                ),
+            rc)
