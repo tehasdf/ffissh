@@ -14,7 +14,10 @@ ffibuilder.set_source(
         #include "libssh2.h"
         #include "libssh2_sftp.h"
     """,
-    libraries=[])
+    libraries=[
+        "ssh2",
+        ],
+    )
 
 # those are just mostly copied from libssh2.h
 ffibuilder.cdef("""
