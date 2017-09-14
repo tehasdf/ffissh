@@ -78,19 +78,29 @@ class SftpFile(object):
                    & constants.LIBSSH2_FXF_TRUNC),
             }[mode]
 
-        self._handle = lib.libssh2_sftp_open(
-            sftp._session,
-            path,
-            flags,
-            0,  # file permissions
+        while True:
+            self._handle = lib.libssh2_sftp_open(
+                sftp._session,
+                path,
+                flags,
+                0,  # file permissions
             )
+            if not self._handle:
+                errno = lib.libssh2_session_last_errno(
+                    self._sftp.connection._session)
+                if errno == constants.LIBSSH2_ERROR_EAGAIN:
+                    self._sftp.connection.waitsocket()
+                else:
+                    raise RuntimeError('failed to initialize SFTP session')
+            else:
+                break
 
     def read(self):
         return ''.join(_read_output(
             self._handle,
             self._sftp.connection,
             read_func=lib.libssh2_sftp_read,
-            blocking=False))
+            blocking=True))
 
     def __enter__(self):
         return self
@@ -115,7 +125,7 @@ class Sftp(object):
             else:
                 break
 
-        ffi.gc(self._session, lib.libssh2_sftp_shutdown)
+        self._session = ffi.gc(self._session, lib.libssh2_sftp_shutdown)
 
     def open(self, *args, **kwargs):
         return SftpFile(self, *args, **kwargs)
